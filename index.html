@@ -58,15 +58,16 @@
                 <div class="relative group">
                     <button id="apiKeyBtn" class="p-3 rounded-xl card shadow-sm hover:scale-105 transition-all flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
-                        <span id="apiKeyStatus">הגדר מפתח</span>
+                        <span id="apiKeyStatus">הגדר מפתחות</span>
                     </button>
                     <!-- Popover for API Key -->
                     <div id="apiKeyPopover" class="hidden absolute left-0 mt-2 w-72 p-4 card rounded-2xl shadow-2xl z-50">
-                        <h4 class="font-bold text-sm mb-2 dark:text-white">Gemini API Key</h4>
-                        <input id="apiKeyInput" type="password" class="w-full p-2 text-xs bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 mb-2" placeholder="AIzaSy...">
+                        <h4 class="font-bold text-sm mb-1 dark:text-white">מערך מפתחות (Gemini API)</h4>
+                        <p class="text-[10px] text-slate-500 dark:text-slate-400 mb-2">ניתן להדביק מספר מפתחות לעקיפת עומסים. **כל מפתח בשורה נפרדת.**</p>
+                        <textarea id="apiKeyInput" rows="3" class="w-full p-2 text-[10px] font-mono bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 mb-2 whitespace-nowrap overflow-x-auto" placeholder="AIzaSy...&#10;AIzaSy...&#10;AIzaSy..."></textarea>
                         <div class="flex gap-2">
-                            <button id="saveApiKey" class="flex-1 py-2 bg-indigo-600 text-white text-[10px] font-bold rounded-lg hover:bg-indigo-700">שמור מפתח</button>
-                            <button id="clearApiKey" class="flex-1 py-2 bg-red-50 text-red-600 text-[10px] font-bold rounded-lg hover:bg-red-100">מחק</button>
+                            <button id="saveApiKey" class="flex-1 py-2 bg-indigo-600 text-white text-[10px] font-bold rounded-lg hover:bg-indigo-700">שמור מפתחות</button>
+                            <button id="clearApiKey" class="flex-1 py-2 bg-red-50 text-red-600 text-[10px] font-bold rounded-lg hover:bg-red-100">נקה הכל</button>
                         </div>
                     </div>
                 </div>
@@ -215,7 +216,9 @@
 
     <script>
         // Global State & Config
-        let currentApiKey = localStorage.getItem('gemini_api_key') || "";
+        let apiKeys = JSON.parse(localStorage.getItem('gemini_api_keys') || "[]");
+        let currentKeyIndex = 0;
+        
         const modelText = "gemini-3.1-flash-lite-preview";
         const modelAudio = "gemini-2.5-flash-preview-tts";
 
@@ -250,12 +253,12 @@
 
         // Initialize UI
         function updateApiStatus() {
-            if (currentApiKey) {
-                els.apiKeyStatus.innerText = "מפתח מוגדר ✅";
+            if (apiKeys.length > 0) {
+                els.apiKeyStatus.innerText = `מפתחות (${apiKeys.length}) ✅`;
                 els.apiKeyStatus.classList.add('text-indigo-600', 'dark:text-indigo-400');
-                els.apiKeyInput.value = currentApiKey;
+                els.apiKeyInput.value = apiKeys.join('\n');
             } else {
-                els.apiKeyStatus.innerText = "הגדר מפתח ⚠️";
+                els.apiKeyStatus.innerText = "הגדר מפתחות ⚠️";
                 els.apiKeyStatus.classList.remove('text-indigo-600', 'dark:text-indigo-400');
                 els.apiKeyInput.value = "";
             }
@@ -309,23 +312,28 @@
             showToast("הגדרות בימות המשיח נמחקו");
         };
 
-        // Gemini Save/Clear
+        // Gemini Save/Clear (MULTIPLE KEYS)
         els.saveApiKey.onclick = () => {
-            const key = els.apiKeyInput.value.trim();
-            if (key) {
-                currentApiKey = key;
-                localStorage.setItem('gemini_api_key', key);
+            const raw = els.apiKeyInput.value.trim();
+            if (raw) {
+                // מפריד את הטקסט לשורות, מנקה רווחים, ומתעלם משורות ריקות
+                apiKeys = raw.split('\n').map(k => k.trim()).filter(k => k.length > 0);
+                localStorage.setItem('gemini_api_keys', JSON.stringify(apiKeys));
+                currentKeyIndex = 0;
                 updateApiStatus();
                 els.apiKeyPopover.classList.add('hidden');
-                showToast("מפתח ה-API נשמר בהצלחה", "success");
+                showToast(`נשמרו ${apiKeys.length} מפתחות בהצלחה`, "success");
+            } else {
+                showToast("יש להזין לפחות מפתח אחד");
             }
         };
 
         els.clearApiKey.onclick = () => {
-            currentApiKey = "";
-            localStorage.removeItem('gemini_api_key');
+            apiKeys = [];
+            currentKeyIndex = 0;
+            localStorage.removeItem('gemini_api_keys');
             updateApiStatus();
-            showToast("מפתח ה-API נמחק");
+            showToast("המפתחות נמחקו");
         };
 
         document.addEventListener('click', () => {
@@ -335,17 +343,26 @@
         els.apiKeyPopover.onclick = (e) => e.stopPropagation();
         els.yemotPopover.onclick = (e) => e.stopPropagation();
 
-        // Utility: API Caller with retry logic (FIXED WITH HEBREW TRANSLATIONS)
-        async function apiCall(model, payload, retries = 5) {
-            if (!currentApiKey) {
+        // Utility: API Caller (WITH KEY ROTATION)
+        async function apiCall(model, payload, retries = null) {
+            if (apiKeys.length === 0) {
                 showToast("אנא הגדר מפתח API בתפריט למעלה");
                 els.apiKeyPopover.classList.remove('hidden');
-                throw new Error("Missing API Key"); // נתפס במערכת ההתראות שלנו
+                throw new Error("Missing API Key");
             }
 
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:${model.includes('tts') ? 'generateContent' : 'generateContent'}?key=${currentApiKey}`;
-            
-            for (let i = 0; i < retries; i++) {
+            // מגדיר מספיק ניסיונות כדי שיוכל לעבור על כל המפתחות לפחות פעמיים
+            const maxRetries = retries || Math.max(5, apiKeys.length * 2);
+
+            for (let i = 0; i < maxRetries; i++) {
+                // שליפת המפתח הנוכחי מתוך הרשימה
+                const currentKey = apiKeys[currentKeyIndex];
+                
+                // קידום המונה למפתח הבא (שיטת "ראונד-רובין")
+                currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
+
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:${model.includes('tts') ? 'generateContent' : 'generateContent'}?key=${currentKey}`;
+                
                 try {
                     const response = await fetch(url, {
                         method: 'POST',
@@ -353,31 +370,32 @@
                         body: JSON.stringify(payload)
                     });
                     const data = await response.json();
+                    
                     if (response.ok) return data;
                     
                     if (response.status === 429) {
-                        await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
+                        // שגיאת עומס: אם יש רק מפתח אחד נמתין, אם יש כמה מפתחות - המערכת תדלג מיד לניסיון עם המפתח הבא!
+                        if (apiKeys.length === 1) {
+                            await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
+                        } else {
+                            await new Promise(r => setTimeout(r, 500)); // השהיה קלה לפני קפיצה למפתח הבא
+                        }
                     } else if (response.status === 403 || response.status === 401 || response.status === 400) {
                         let msg = (data.error?.message || "").toLowerCase();
-                        if (msg.includes("expired")) {
-                            throw new Error("מפתח ה-API פג תוקף. יש לייצר מפתח חדש ב-Google AI Studio.");
-                        } else if (msg.includes("invalid") || msg.includes("not valid")) {
-                            throw new Error("מפתח ה-API אינו חוקי. אנא ודא שהעתקת אותו נכון.");
+                        if (msg.includes("expired") || msg.includes("invalid") || msg.includes("not valid")) {
+                            console.warn(`Key invalid or expired: ${currentKey.substring(0, 5)}... skipping to next.`);
+                            // המערכת תתעלם מהמפתח ותמשיך בניסיון למפתח הבא בלולאה
                         } else {
-                            throw new Error("שגיאת הרשאות: מפתח ה-API שגוי או חסר הרשאות.");
+                            throw new Error("שגיאת הרשאות במפתח API.");
                         }
                     } else {
-                        let msg = (data.error?.message || "שגיאת תקשורת לא ידועה מול שרתי גוגל.").toLowerCase();
-                        if (msg.includes("expired")) {
-                            throw new Error("מפתח ה-API פג תוקף. יש לייצר מפתח חדש.");
-                        }
-                        throw new Error(data.error?.message || "שגיאת תקשורת");
+                        throw new Error(data.error?.message || "שגיאת תקשורת מול שרת גוגל.");
                     }
                 } catch (e) {
-                    if (i === retries - 1) throw e;
+                    if (i === maxRetries - 1) throw e;
                 }
             }
-            throw new Error("עומס על שרתי גוגל או שנגמרה מכסת ה-API. נסה שוב מאוחר יותר.");
+            throw new Error("עומס על שרתי גוגל או שכל המפתחות שהזנת חסומים/פגי תוקף. נסה שוב.");
         }
 
         function showToast(msg, type = 'error') {
