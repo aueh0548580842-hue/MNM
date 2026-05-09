@@ -335,12 +335,12 @@
         els.apiKeyPopover.onclick = (e) => e.stopPropagation();
         els.yemotPopover.onclick = (e) => e.stopPropagation();
 
-        // Utility: API Caller with retry logic (FIXED)
+        // Utility: API Caller with retry logic (FIXED WITH HEBREW TRANSLATIONS)
         async function apiCall(model, payload, retries = 5) {
             if (!currentApiKey) {
                 showToast("אנא הגדר מפתח API בתפריט למעלה");
                 els.apiKeyPopover.classList.remove('hidden');
-                throw new Error("Missing API Key");
+                throw new Error("Missing API Key"); // נתפס במערכת ההתראות שלנו
             }
 
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:${model.includes('tts') ? 'generateContent' : 'generateContent'}?key=${currentApiKey}`;
@@ -354,13 +354,24 @@
                     });
                     const data = await response.json();
                     if (response.ok) return data;
+                    
                     if (response.status === 429) {
                         await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
-                    } else if (response.status === 403 || response.status === 401) {
-                        showToast("מפתח ה-API אינו תקין");
-                        throw new Error("Invalid API Key");
+                    } else if (response.status === 403 || response.status === 401 || response.status === 400) {
+                        let msg = (data.error?.message || "").toLowerCase();
+                        if (msg.includes("expired")) {
+                            throw new Error("מפתח ה-API פג תוקף. יש לייצר מפתח חדש ב-Google AI Studio.");
+                        } else if (msg.includes("invalid") || msg.includes("not valid")) {
+                            throw new Error("מפתח ה-API אינו חוקי. אנא ודא שהעתקת אותו נכון.");
+                        } else {
+                            throw new Error("שגיאת הרשאות: מפתח ה-API שגוי או חסר הרשאות.");
+                        }
                     } else {
-                        throw new Error(data.error?.message || "Communication Error");
+                        let msg = (data.error?.message || "שגיאת תקשורת לא ידועה מול שרתי גוגל.").toLowerCase();
+                        if (msg.includes("expired")) {
+                            throw new Error("מפתח ה-API פג תוקף. יש לייצר מפתח חדש.");
+                        }
+                        throw new Error(data.error?.message || "שגיאת תקשורת");
                     }
                 } catch (e) {
                     if (i === retries - 1) throw e;
