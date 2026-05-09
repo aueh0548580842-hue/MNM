@@ -44,17 +44,11 @@
                     </button>
                     <!-- Popover for Yemot HaMashiach -->
                     <div id="yemotPopover" class="hidden absolute left-0 mt-2 w-72 p-4 card rounded-2xl shadow-2xl z-50">
-                        <h4 class="font-bold text-sm mb-2 dark:text-white">ממשק בימות המשיח</h4>
-                        <input id="yemotToken" type="password" class="w-full p-2 text-xs bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-green-500 mb-2" placeholder="טוקן (או מספר_מערכת:סיסמה)">
-                        <input id="yemotExt" type="text" class="w-full p-2 text-xs bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-green-500 mb-2" placeholder="שלוחה (למשל: 1)">
-                        <div class="flex items-center gap-2 mb-3">
-                            <input id="yemotFile" type="text" class="w-full p-2 text-xs bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-green-500" placeholder="מס' קובץ (למשל: 000)">
-                            <label class="text-[10px] flex items-center gap-1 dark:text-white whitespace-nowrap cursor-pointer">
-                                <input type="checkbox" id="yemotAutoInc" class="rounded"> קדם אוטומטית
-                            </label>
-                        </div>
+                        <h4 class="font-bold text-sm mb-1 dark:text-white">חיבור לבימות המשיח</h4>
+                        <p class="text-[10px] text-slate-500 dark:text-slate-400 mb-3">הזן טוקן כאן. את השלוחה ומספר הקובץ תבחר בנפרד לכל הקלטה.</p>
+                        <input id="yemotToken" type="password" class="w-full p-2 text-xs bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-green-500 mb-3" placeholder="טוקן (או מספר_מערכת:סיסמה)">
                         <div class="flex gap-2">
-                            <button id="saveYemot" class="flex-1 py-2 bg-green-600 text-white text-[10px] font-bold rounded-lg hover:bg-green-700">שמור</button>
+                            <button id="saveYemot" class="flex-1 py-2 bg-green-600 text-white text-[10px] font-bold rounded-lg hover:bg-green-700">שמור טוקן</button>
                             <button id="clearYemot" class="flex-1 py-2 bg-red-50 text-red-600 text-[10px] font-bold rounded-lg hover:bg-red-100">מחק</button>
                         </div>
                     </div>
@@ -249,9 +243,6 @@
             yemotBtn: document.getElementById('yemotBtn'),
             yemotPopover: document.getElementById('yemotPopover'),
             yemotToken: document.getElementById('yemotToken'),
-            yemotExt: document.getElementById('yemotExt'),
-            yemotFile: document.getElementById('yemotFile'),
-            yemotAutoInc: document.getElementById('yemotAutoInc'),
             saveYemot: document.getElementById('saveYemot'),
             clearYemot: document.getElementById('clearYemot'),
             yemotStatus: document.getElementById('yemotStatus')
@@ -277,9 +268,6 @@
                 els.yemotStatus.innerText = "בימות מחובר ✅";
                 els.yemotStatus.classList.add('text-green-600', 'dark:text-green-400');
                 els.yemotToken.value = t;
-                els.yemotExt.value = localStorage.getItem('yemot_ext') || '';
-                els.yemotFile.value = localStorage.getItem('yemot_file') || '';
-                els.yemotAutoInc.checked = localStorage.getItem('yemot_auto') === 'true';
             } else {
                 els.yemotStatus.innerText = "בימות המשיח ☎️";
                 els.yemotStatus.classList.remove('text-green-600', 'dark:text-green-400');
@@ -304,27 +292,18 @@
         // Yemot Save/Clear
         els.saveYemot.onclick = () => {
             const token = els.yemotToken.value.trim();
-            const ext = els.yemotExt.value.trim();
-            const file = els.yemotFile.value.trim();
-            
-            if (token && ext && file) {
+            if (token) {
                 localStorage.setItem('yemot_token', token);
-                localStorage.setItem('yemot_ext', ext);
-                localStorage.setItem('yemot_file', file);
-                localStorage.setItem('yemot_auto', els.yemotAutoInc.checked);
                 loadYemotStatus();
                 els.yemotPopover.classList.add('hidden');
                 showToast("הגדרות בימות המשיח נשמרו", "success");
             } else {
-                showToast("יש למלא את כל השדות להגדרת בימות המשיח");
+                showToast("יש להזין טוקן");
             }
         };
 
         els.clearYemot.onclick = () => {
             localStorage.removeItem('yemot_token');
-            localStorage.removeItem('yemot_ext');
-            localStorage.removeItem('yemot_file');
-            localStorage.removeItem('yemot_auto');
             loadYemotStatus();
             els.yemotPopover.classList.add('hidden');
             showToast("הגדרות בימות המשיח נמחקו");
@@ -356,7 +335,7 @@
         els.apiKeyPopover.onclick = (e) => e.stopPropagation();
         els.yemotPopover.onclick = (e) => e.stopPropagation();
 
-        // Utility: API Caller with retry logic
+        // Utility: API Caller with retry logic (FIXED)
         async function apiCall(model, payload, retries = 5) {
             if (!currentApiKey) {
                 showToast("אנא הגדר מפתח API בתפריט למעלה");
@@ -387,6 +366,7 @@
                     if (i === retries - 1) throw e;
                 }
             }
+            throw new Error("עומס על שרתי גוגל או שנגמרה מכסת ה-API. נסה שוב מאוחר יותר.");
         }
 
         function showToast(msg, type = 'error') {
@@ -542,20 +522,23 @@
         };
 
         // --- Yemot HaMashiach Upload Function ---
-        window.uploadToYemot = async function(btnElement, blobUrl) {
+        window.uploadToYemot = async function(btnElement, blobUrl, extId, fileId) {
             const token = localStorage.getItem('yemot_token');
-            const ext = localStorage.getItem('yemot_ext');
-            let fileNum = localStorage.getItem('yemot_file');
-            const autoInc = localStorage.getItem('yemot_auto') === 'true';
+            const ext = document.getElementById(extId).value.trim();
+            const fileNum = document.getElementById(fileId).value.trim();
 
-            if (!token || !ext || !fileNum) {
-                showToast("יש להגדיר טוקן, שלוחה ומספר קובץ בתפריט בימות המשיח");
+            if (!token) {
+                showToast("יש להגדיר טוקן חיבור בתפריט בימות המשיח למעלה");
                 els.yemotPopover.classList.remove('hidden');
+                return;
+            }
+            if (!ext || !fileNum) {
+                showToast("יש להזין שלוחה ומספר קובץ לפני ההעלאה");
                 return;
             }
 
             const originalHtml = btnElement.innerHTML;
-            btnElement.innerHTML = `<div class="loading-spinner !w-5 !h-5 !border-green-600"></div>`;
+            btnElement.innerHTML = `<div class="loading-spinner !w-4 !h-4 !border-green-600"></div>`;
             btnElement.disabled = true;
 
             try {
@@ -576,13 +559,6 @@
                 
                 if (data.responseStatus === "OK") {
                     showToast(`קובץ ${fileNum} הועלה בהצלחה לשלוחה ${ext}!`, "success");
-                    
-                    // Auto-advance file number if checked
-                    if (autoInc) {
-                        const nextNum = String(parseInt(fileNum) + 1).padStart(3, '0');
-                        els.yemotFile.value = nextNum;
-                        localStorage.setItem('yemot_file', nextNum);
-                    }
                 } else {
                     throw new Error(data.message || "שגיאה לא ידועה משרתי בימות המשיח");
                 }
@@ -622,20 +598,28 @@
             els.noTracks.classList.add('hidden');
             const url = URL.createObjectURL(blob);
             const div = document.createElement('div');
-            div.className = "card p-4 rounded-2xl flex items-center gap-4 animate-in fade-in slide-in-from-bottom duration-300 shadow-sm border-slate-100 dark:border-slate-800";
+            const uniqueId = Date.now();
+            div.className = "card p-4 rounded-2xl flex flex-col gap-3 animate-in fade-in slide-in-from-bottom duration-300 shadow-sm border-slate-100 dark:border-slate-800";
+            
             div.innerHTML = `
-                <div class="flex-grow">
-                    <div class="font-bold text-sm truncate dark:text-white">${title}...</div>
-                    <div class="text-[10px] text-slate-400">${els.voiceSelect.value} | ${els.styleSelect.value}</div>
-                </div>
-                <audio src="${url}" controls class="h-8 w-40"></audio>
-                <div class="flex gap-1">
-                    <button onclick="window.uploadToYemot(this, '${url}')" class="p-2 hover:bg-green-50 dark:hover:bg-slate-700 rounded-lg text-green-600 transition-colors" title="העלה לבימות המשיח">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
-                    </button>
-                    <a href="${url}" download="voice_${Date.now()}.wav" class="p-2 hover:bg-indigo-50 dark:hover:bg-slate-700 rounded-lg text-indigo-600 transition-colors" title="הורד קובץ">
+                <div class="flex items-center justify-between gap-4">
+                    <div class="flex-grow">
+                        <div class="font-bold text-sm truncate dark:text-white">${title}...</div>
+                        <div class="text-[10px] text-slate-400">${els.voiceSelect.value} | ${els.styleSelect.value}</div>
+                    </div>
+                    <audio src="${url}" controls class="h-8 w-40"></audio>
+                    <a href="${url}" download="voice_${uniqueId}.wav" class="p-2 hover:bg-indigo-50 dark:hover:bg-slate-700 rounded-lg text-indigo-600 transition-colors" title="הורד קובץ למחשב בלבד">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                     </a>
+                </div>
+                <div class="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+                    <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400 whitespace-nowrap">בימות המשיח:</span>
+                    <input type="text" id="ext_${uniqueId}" placeholder="שלוחה" class="w-16 p-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded outline-none focus:border-green-500 dark:text-white text-center">
+                    <input type="text" id="file_${uniqueId}" placeholder="מס' קובץ" class="w-20 p-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded outline-none focus:border-green-500 dark:text-white text-center">
+                    <button onclick="window.uploadToYemot(this, '${url}', 'ext_${uniqueId}', 'file_${uniqueId}')" class="flex-grow py-1.5 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-bold rounded hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors flex items-center justify-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                        העלה לשלוחה
+                    </button>
                 </div>
             `;
             els.tracksContainer.prepend(div);
