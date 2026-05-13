@@ -1,52 +1,48 @@
 module.exports = async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
-  
+  // מוודאים שהבקשה היא מסוג POST
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method Not Allowed' });
+  }
+
   try {
     const { token, path, fileBase64 } = req.body;
-    if (!token || !path || !fileBase64) return res.status(400).json({ error: 'חסרים נתונים' });
 
-    // ממירים את האודיו בחזרה
-    const fileBuffer = Buffer.from(fileBase64, 'base64');
-    const boundary = '----VoiceMasterBoundary' + Date.now();
-    
-    // בונים את החבילה בצורה היציבה ביותר
-    let headerData = '--' + boundary + '\r\n';
-    headerData += 'Content-Disposition: form-data; name="token"\r\n\r\n' + token + '\r\n';
-    headerData += '--' + boundary + '\r\n';
-    headerData += 'Content-Disposition: form-data; name="path"\r\n\r\n' + path + '\r\n';
-    headerData += '--' + boundary + '\r\n';
-    headerData += 'Content-Disposition: form-data; name="file"; filename="audio.wav"\r\n';
-    headerData += 'Content-Type: audio/wav\r\n\r\n';
+    if (!token || !path || !fileBase64) {
+      return res.status(400).json({ error: 'חסרים נתונים (טוקן, נתיב או קובץ)' });
+    }
 
-    const finalBody = Buffer.concat([
-        Buffer.from(headerData, 'utf8'),
-        fileBuffer,
-        Buffer.from('\r\n--' + boundary + '--\r\n', 'utf8')
-    ]);
+    // המרת הטקסט חזרה לקובץ אודיו תקני
+    const buffer = Buffer.from(fileBase64, 'base64');
+    const blob = new Blob([buffer], { type: 'audio/wav' });
 
-    // שליחה לבימות המשיח
+    // שימוש באובייקט FormData תקני (עובד מצוין בשרתי Vercel מודרניים)
+    const formData = new FormData();
+    formData.append('token', token);
+    formData.append('path', path);
+    formData.append('file', blob, 'audio.wav');
+
+    // שליחה לשרתים של בימות המשיח
     const response = await fetch('https://www.yemot.co.il/ym/api/UploadFile', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'multipart/form-data; boundary=' + boundary,
-        'Content-Length': finalBody.length
-      },
-      body: finalBody
+      body: formData
     });
 
-    // קריאת התשובה כטקסט קודם, למקרה שבימות המשיח חוסמים ומחזירים HTML
-    const textResponse = await response.text(); 
-    
+    // קריאת התשובה הגולמית
+    const textResponse = await response.text();
+
     try {
+        // מנסים לתרגם את התשובה ל-JSON מסודר
         const data = JSON.parse(textResponse);
         return res.status(200).json(data);
     } catch(e) {
-        return res.status(502).json({ 
-            error: "תשובה לא תקינה מבימות המשיח. ייתכן שבימות חוסמים את Vercel.", 
-            details: textResponse.substring(0, 150) 
+        // אם בימות מחזירים שוב דף שגיאה, הפעם לא ננחש למה, אלא נדפיס את השגיאה האמיתית שלהם
+        console.error("Yemot Raw Response:", textResponse);
+        return res.status(502).json({
+            error: "השרת של בימות המשיח דחה את הקובץ. התשובה שלהם: " + textResponse.substring(0, 50) + "..."
         });
     }
+
   } catch (error) {
-    return res.status(500).json({ error: "שגיאת שרת פנימית ב-Vercel: " + error.message });
+    return res.status(500).json({ error: "שגיאת Vercel פנימית: " + error.message });
   }
 };
