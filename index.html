@@ -550,7 +550,7 @@
             toggleLoader('btn', false);
         };
 
-        // --- Yemot HaMashiach Upload Function ---
+        // --- Yemot HaMashiach Upload Function (דרך השרת שלנו ב-Vercel) ---
         window.uploadToYemot = async function(btnElement, blobUrl, extId, fileId) {
             const token = localStorage.getItem('yemot_token');
             const ext = document.getElementById(extId).value.trim();
@@ -571,29 +571,44 @@
             btnElement.disabled = true;
 
             try {
+                // 1. לוקחים את הקובץ שנוצר בדפדפן
                 const res = await fetch(blobUrl);
                 const blob = await res.blob();
                 
-                const formData = new FormData();
-                formData.append('token', token);
-                formData.append('path', `ivr2:${ext}/${fileNum}.wav`);
-                formData.append('file', blob, `${fileNum}.wav`);
+                // 2. ממירים אותו לטקסט (Base64) כדי שהשרת שלנו יוכל לקרוא אותו
+                const reader = new FileReader();
+                reader.readAsDataURL(blob);
+                reader.onloadend = async function() {
+                    const base64data = reader.result.split(',')[1];
+                    
+                    try {
+                        // 3. שולחים את הקובץ למיני-שרת שלנו ב-Vercel במקום לבימות המשיח ישירות
+                        const uploadRes = await fetch('/api/upload', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                token: token,
+                                path: `ivr2:${ext}/${fileNum}.wav`,
+                                fileBase64: base64data
+                            })
+                        });
 
-                const uploadRes = await fetch('https://www.yemot.co.il/ym/api/UploadFile', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const data = await uploadRes.json();
-                
-                if (data.responseStatus === "OK") {
-                    showToast(`קובץ ${fileNum} הועלה בהצלחה לשלוחה ${ext}!`, "success");
-                } else {
-                    throw new Error(data.message || "שגיאה לא ידועה משרתי בימות המשיח");
-                }
+                        const data = await uploadRes.json();
+                        
+                        if (data.responseStatus === "OK") {
+                            showToast(`קובץ ${fileNum} הועלה בהצלחה לשלוחה ${ext}!`, "success");
+                        } else {
+                            throw new Error(data.message || data.error || "שגיאה משרתי בימות המשיח");
+                        }
+                    } catch (err) {
+                        showToast("שגיאה בהעלאה: " + err.message);
+                    } finally {
+                        btnElement.innerHTML = originalHtml;
+                        btnElement.disabled = false;
+                    }
+                };
             } catch (e) {
-                showToast("שגיאה בהעלאה: " + e.message);
-            } finally {
+                showToast("שגיאה בהכנת הקובץ: " + e.message);
                 btnElement.innerHTML = originalHtml;
                 btnElement.disabled = false;
             }
