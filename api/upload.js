@@ -1,7 +1,4 @@
-// קובץ: api/upload.js
-// זהו השרת שלנו שמתווך בין הדפדפן לבין בימות המשיח
-
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // מוודאים שהבקשה היא מסוג POST
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method Not Allowed' });
@@ -40,4 +37,4 @@ export default async function handler(req, res) {
     console.error('Upload Error:', error);
     return res.status(500).json({ message: error.message || 'שגיאת שרת פנימית' });
   }
-}
+};
