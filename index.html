@@ -235,14 +235,12 @@
             body: document.getElementById('bodyTag'),
             toast: document.getElementById('toast'),
             toastMessage: document.getElementById('toastMessage'),
-            // API Key elements
             apiKeyBtn: document.getElementById('apiKeyBtn'),
             apiKeyPopover: document.getElementById('apiKeyPopover'),
             apiKeyInput: document.getElementById('apiKeyInput'),
             saveApiKey: document.getElementById('saveApiKey'),
             clearApiKey: document.getElementById('clearApiKey'),
             apiKeyStatus: document.getElementById('apiKeyStatus'),
-            // Yemot elements
             yemotBtn: document.getElementById('yemotBtn'),
             yemotPopover: document.getElementById('yemotPopover'),
             yemotToken: document.getElementById('yemotToken'),
@@ -251,7 +249,6 @@
             yemotStatus: document.getElementById('yemotStatus')
         };
 
-        // Initialize UI
         function updateApiStatus() {
             if (apiKeys.length > 0) {
                 els.apiKeyStatus.innerText = `מפתחות (${apiKeys.length}) ✅`;
@@ -279,7 +276,6 @@
         }
         loadYemotStatus();
 
-        // Popovers Toggle Logic
         els.apiKeyBtn.onclick = (e) => {
             e.stopPropagation();
             els.apiKeyPopover.classList.toggle('hidden');
@@ -292,7 +288,6 @@
             els.apiKeyPopover.classList.add('hidden');
         };
 
-        // Yemot Save/Clear
         els.saveYemot.onclick = () => {
             const token = els.yemotToken.value.trim();
             if (token) {
@@ -312,11 +307,9 @@
             showToast("הגדרות בימות המשיח נמחקו");
         };
 
-        // Gemini Save/Clear (MULTIPLE KEYS)
         els.saveApiKey.onclick = () => {
             const raw = els.apiKeyInput.value.trim();
             if (raw) {
-                // מפריד את הטקסט לשורות, מנקה רווחים, ומתעלם משורות ריקות
                 apiKeys = raw.split('\n').map(k => k.trim()).filter(k => k.length > 0);
                 localStorage.setItem('gemini_api_keys', JSON.stringify(apiKeys));
                 currentKeyIndex = 0;
@@ -343,7 +336,6 @@
         els.apiKeyPopover.onclick = (e) => e.stopPropagation();
         els.yemotPopover.onclick = (e) => e.stopPropagation();
 
-        // Utility: API Caller (WITH KEY ROTATION)
         async function apiCall(model, payload, retries = null) {
             if (apiKeys.length === 0) {
                 showToast("אנא הגדר מפתח API בתפריט למעלה");
@@ -351,14 +343,10 @@
                 throw new Error("Missing API Key");
             }
 
-            // מגדיר מספיק ניסיונות כדי שיוכל לעבור על כל המפתחות לפחות פעמיים
             const maxRetries = retries || Math.max(5, apiKeys.length * 2);
 
             for (let i = 0; i < maxRetries; i++) {
-                // שליפת המפתח הנוכחי מתוך הרשימה
                 const currentKey = apiKeys[currentKeyIndex];
-                
-                // קידום המונה למפתח הבא (שיטת "ראונד-רובין")
                 currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
 
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:${model.includes('tts') ? 'generateContent' : 'generateContent'}?key=${currentKey}`;
@@ -374,17 +362,15 @@
                     if (response.ok) return data;
                     
                     if (response.status === 429) {
-                        // שגיאת עומס: אם יש רק מפתח אחד נמתין, אם יש כמה מפתחות - המערכת תדלג מיד לניסיון עם המפתח הבא!
                         if (apiKeys.length === 1) {
                             await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
                         } else {
-                            await new Promise(r => setTimeout(r, 500)); // השהיה קלה לפני קפיצה למפתח הבא
+                            await new Promise(r => setTimeout(r, 500));
                         }
                     } else if (response.status === 403 || response.status === 401 || response.status === 400) {
                         let msg = (data.error?.message || "").toLowerCase();
                         if (msg.includes("expired") || msg.includes("invalid") || msg.includes("not valid")) {
-                            console.warn(`Key invalid or expired: ${currentKey.substring(0, 5)}... skipping to next.`);
-                            // המערכת תתעלם מהמפתח ותמשיך בניסיון למפתח הבא בלולאה
+                            console.warn(`Key invalid or expired... skipping`);
                         } else {
                             throw new Error("שגיאת הרשאות במפתח API.");
                         }
@@ -395,123 +381,89 @@
                     if (i === maxRetries - 1) throw e;
                 }
             }
-            throw new Error("עומס על שרתי גוגל או שכל המפתחות שהזנת חסומים/פגי תוקף. נסה שוב.");
+            throw new Error("עומס על שרתי גוגל או שכל המפתחות חסומים. נסה שוב.");
         }
 
         function showToast(msg, type = 'error') {
             els.toastMessage.innerText = msg;
             els.toast.className = `fixed bottom-8 left-8 px-6 py-3 rounded-xl shadow-2xl transition-all z-50 transform translate-y-0 opacity-100 ${type === 'error' ? 'bg-red-600' : (type === 'success' ? 'bg-green-600' : 'bg-indigo-600')} text-white`;
-            setTimeout(() => { els.toast.classList.add('opacity-0', 'translate-y-4'); }, 4000);
+            setTimeout(() => { els.toast.classList.add('opacity-0', 'translate-y-4'); }, 5000);
         }
 
         // --- LLM Features ---
-
-        // ✨ Magic Write
         els.magicWriteBtn.onclick = async () => {
             const prompt = els.promptInput.value.trim();
             if (!prompt) return showToast("תאר מה לכתוב בתיבה");
-            
             toggleLoader('magic', true);
             try {
-                const data = await apiCall(modelText, {
-                    contents: [{ parts: [{ text: `כתוב סקריפט קצר ומקצועי לקריינות בעברית עבור הנושא הבא: "${prompt}". החזר רק את הטקסט של הסקריפט ללא הסברים או כותרות.` }] }]
-                });
-                const result = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (result) els.textInput.value = result.trim();
+                const data = await apiCall(modelText, { contents: [{ parts: [{ text: `כתוב סקריפט לקריינות: "${prompt}". החזר רק את הטקסט.` }] }] });
+                if (data.candidates?.[0]?.content?.parts?.[0]?.text) els.textInput.value = data.candidates[0].content.parts[0].text.trim();
             } catch (e) { if(e.message !== "Missing API Key") showToast(e.message); }
             toggleLoader('magic', false);
         };
 
-        // ✨ Smart Edit
         async function smartEdit(instruction) {
             const text = els.textInput.value.trim();
             if (!text) return showToast("הכנס קודם טקסט לתיבה");
-            
             showToast("מעבד טקסט...", "success");
             try {
-                const data = await apiCall(modelText, {
-                    contents: [{ parts: [{ text: `${instruction} על הטקסט הבא: "${text}". החזר רק את הטקסט המעובד.` }] }]
-                });
-                const result = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (result) els.textInput.value = result.trim();
+                const data = await apiCall(modelText, { contents: [{ parts: [{ text: `${instruction} על הטקסט הבא: "${text}". החזר רק טקסט מעובד.` }] }] });
+                if (data.candidates?.[0]?.content?.parts?.[0]?.text) els.textInput.value = data.candidates[0].content.parts[0].text.trim();
             } catch (e) { if(e.message !== "Missing API Key") showToast(e.message); }
         }
 
-        // ✨ Translate
         async function translateText() {
             const text = els.textInput.value.trim();
             if (!text) return showToast("אין טקסט לתרגום");
             showToast("מתרגם לאנגלית...", "success");
             try {
-                const data = await apiCall(modelText, {
-                    contents: [{ parts: [{ text: `Translate the following text to fluent English suitable for narration: "${text}". Return only the translation.` }] }]
-                });
-                const result = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (result) els.textInput.value = result.trim();
+                const data = await apiCall(modelText, { contents: [{ parts: [{ text: `Translate to English narration: "${text}". Return only translation.` }] }] });
+                if (data.candidates?.[0]?.content?.parts?.[0]?.text) els.textInput.value = data.candidates[0].content.parts[0].text.trim();
             } catch (e) { if(e.message !== "Missing API Key") showToast(e.message); }
         }
 
-        // ✨ Podcast Script
         async function generatePodcastScript() {
             const topic = els.promptInput.value.trim() || "Technology";
-            showToast("יוצר תסריט פודקאסט...", "success");
+            showToast("יוצר תסריט...", "success");
             try {
-                const data = await apiCall(modelText, {
-                    contents: [{ parts: [{ text: `Create a short podcast script dialogue between two people about: "${topic}". Return only the dialogue in Hebrew.` }] }]
-                });
-                const result = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (result) els.textInput.value = result.trim();
+                const data = await apiCall(modelText, { contents: [{ parts: [{ text: `Create a podcast script dialogue in Hebrew about: "${topic}". Return only dialogue.` }] }] });
+                if (data.candidates?.[0]?.content?.parts?.[0]?.text) els.textInput.value = data.candidates[0].content.parts[0].text.trim();
             } catch (e) { if(e.message !== "Missing API Key") showToast(e.message); }
         }
 
-        // ✨ Summarize
         async function summarizeText() {
             const text = els.textInput.value.trim();
             if (!text) return showToast("אין טקסט לסיכום");
             showToast("מסכם לנקודות...", "success");
             try {
-                const data = await apiCall(modelText, {
-                    contents: [{ parts: [{ text: `Summarize the following text into 3 clear key points for narration in Hebrew: "${text}".` }] }]
-                });
-                const result = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (result) els.textInput.value = result.trim();
+                const data = await apiCall(modelText, { contents: [{ parts: [{ text: `Summarize into 3 key points in Hebrew: "${text}".` }] }] });
+                if (data.candidates?.[0]?.content?.parts?.[0]?.text) els.textInput.value = data.candidates[0].content.parts[0].text.trim();
             } catch (e) { if(e.message !== "Missing API Key") showToast(e.message); }
         }
 
-        // ✨ Tone Analysis
         els.analyzeToneBtn.onclick = async () => {
             const text = els.textInput.value.trim();
             if (!text) return showToast("אין טקסט לניתוח");
-            
             toggleLoader('tone', true);
             try {
-                const data = await apiCall(modelText, {
-                    contents: [{ parts: [{ text: `Analyze the sentiment of the following text and pick the best speaking style from this list: (natural, cheerful, serious, whisper, excited, calm, authoritative, friendly, professional, storytelling, shouting, terrified, sad, angry, hopeful). Return ONLY the English word. Text: "${text}"` }] }]
-                });
+                const data = await apiCall(modelText, { contents: [{ parts: [{ text: `Analyze sentiment and pick the best speaking style from this list: (natural, cheerful, serious, whisper, excited, calm, authoritative, friendly, professional, storytelling, shouting, terrified, sad, angry, hopeful). Return ONLY the English word. Text: "${text}"` }] }] });
                 const choice = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim().toLowerCase();
                 if (choice) {
                     const cleanChoice = choice.replace(/[^a-z]/g, '');
                     const option = Array.from(els.styleSelect.options).find(o => o.value === cleanChoice);
-                    if (option) {
-                        els.styleSelect.value = cleanChoice;
-                        showToast(`הסגנון הותאם ל: ${option.text}`, "success");
-                    }
+                    if (option) { els.styleSelect.value = cleanChoice; showToast(`הסגנון הותאם ל: ${option.text}`, "success"); }
                 }
             } catch (e) { if(e.message !== "Missing API Key") showToast(e.message); }
             toggleLoader('tone', false);
         };
 
-        // ✨ Vocalization (Nikud)
         document.getElementById('vocalizeBtn').onclick = async () => {
             const text = els.textInput.value.trim();
             if (!text) return showToast("אין טקסט לניקוד");
             toggleLoader('vocalize', true);
             try {
-                const data = await apiCall(modelText, {
-                    contents: [{ parts: [{ text: `הוסף ניקוד דקדוקי מלא ומדויק לטקסט הבא בעברית: "${text}". החזר רק את הטקסט המנוקד.` }] }]
-                });
-                const result = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (result) els.textInput.value = result.trim();
+                const data = await apiCall(modelText, { contents: [{ parts: [{ text: `הוסף ניקוד מלא ומדויק לטקסט: "${text}". החזר רק את הטקסט המנוקד.` }] }] });
+                if (data.candidates?.[0]?.content?.parts?.[0]?.text) els.textInput.value = data.candidates[0].content.parts[0].text.trim();
             } catch (e) { if(e.message !== "Missing API Key") showToast(e.message); }
             toggleLoader('vocalize', false);
         };
@@ -527,13 +479,7 @@
                     contents: [{ parts: [{ text: `Say in a ${els.styleSelect.value} style: ${text}` }] }],
                     generationConfig: {
                         responseModalities: ["AUDIO"],
-                        speechConfig: { 
-                            voiceConfig: { 
-                                prebuiltVoiceConfig: { 
-                                    voiceName: els.voiceSelect.value 
-                                } 
-                            } 
-                        }
+                        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: els.voiceSelect.value } } }
                     }
                 });
 
@@ -550,39 +496,29 @@
             toggleLoader('btn', false);
         };
 
-        // --- Yemot HaMashiach Upload Function (דרך השרת שלנו ב-Vercel) ---
+        // --- Yemot HaMashiach Upload Function (Smart Error Catching) ---
         window.uploadToYemot = async function(btnElement, blobUrl, extId, fileId) {
             const token = localStorage.getItem('yemot_token');
             const ext = document.getElementById(extId).value.trim();
             const fileNum = document.getElementById(fileId).value.trim();
 
-            if (!token) {
-                showToast("יש להגדיר טוקן חיבור בתפריט בימות המשיח למעלה");
-                els.yemotPopover.classList.remove('hidden');
-                return;
-            }
-            if (!ext || !fileNum) {
-                showToast("יש להזין שלוחה ומספר קובץ לפני ההעלאה");
-                return;
-            }
+            if (!token) { showToast("יש להגדיר טוקן חיבור למעלה"); els.yemotPopover.classList.remove('hidden'); return; }
+            if (!ext || !fileNum) return showToast("יש להזין שלוחה ומספר קובץ");
 
             const originalHtml = btnElement.innerHTML;
             btnElement.innerHTML = `<div class="loading-spinner !w-4 !h-4 !border-green-600"></div>`;
             btnElement.disabled = true;
 
             try {
-                // 1. לוקחים את הקובץ שנוצר בדפדפן
                 const res = await fetch(blobUrl);
                 const blob = await res.blob();
                 
-                // 2. ממירים אותו לטקסט (Base64) כדי שהשרת שלנו יוכל לקרוא אותו
                 const reader = new FileReader();
                 reader.readAsDataURL(blob);
                 reader.onloadend = async function() {
                     const base64data = reader.result.split(',')[1];
                     
                     try {
-                        // 3. שולחים את הקובץ למיני-שרת שלנו ב-Vercel במקום לבימות המשיח ישירות
                         const uploadRes = await fetch('/api/upload', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -593,15 +529,31 @@
                             })
                         });
 
-                        const data = await uploadRes.json();
-                        
+                        const textData = await uploadRes.text();
+                        let data;
+                        try {
+                            data = JSON.parse(textData);
+                        } catch(e) {
+                            if (uploadRes.status === 404) {
+                                throw new Error("שגיאה 404: תיקיית השרת (api) לא נמצאת או לא מעודכנת ב-Vercel.");
+                            } else if (uploadRes.status >= 500) {
+                                throw new Error("שגיאה 500: קריסה פנימית בשרת ה-Vercel שלנו.");
+                            } else {
+                                throw new Error(`שגיאה לא מוכרת: השרת החזיר דף HTML. (קוד ${uploadRes.status})`);
+                            }
+                        }
+
+                        if (!uploadRes.ok) {
+                            throw new Error(data.error || "שגיאה מהשרת");
+                        }
+
                         if (data.responseStatus === "OK") {
                             showToast(`קובץ ${fileNum} הועלה בהצלחה לשלוחה ${ext}!`, "success");
                         } else {
-                            throw new Error(data.message || data.error || "שגיאה משרתי בימות המשיח");
+                            throw new Error(data.message || data.error || "שגיאה לא ידועה מבימות המשיח");
                         }
                     } catch (err) {
-                        showToast("שגיאה בהעלאה: " + err.message);
+                        showToast(err.message);
                     } finally {
                         btnElement.innerHTML = originalHtml;
                         btnElement.disabled = false;
@@ -614,7 +566,6 @@
             }
         };
 
-        // --- Helpers ---
         function toggleLoader(key, show) {
             const l = document.getElementById(key + 'Loader');
             const i = document.getElementById(key + 'Icon');
