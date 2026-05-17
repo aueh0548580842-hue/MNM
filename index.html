@@ -21,7 +21,6 @@
 </head>
 <body class="min-h-screen py-8 px-4 transition-colors duration-500" id="bodyTag">
     <div class="max-w-6xl mx-auto">
-        <!-- Header -->
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
             <div class="flex items-center gap-4">
                 <div class="bg-indigo-600 p-3 rounded-2xl text-white shadow-xl">
@@ -36,17 +35,15 @@
             </div>
             
             <div class="flex items-center gap-2">
-                <!-- Yemot HaMashiach Management -->
                 <div class="relative group">
                     <button id="yemotBtn" class="p-3 rounded-xl card shadow-sm hover:scale-105 transition-all flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
                         <span id="yemotStatus">בימות המשיח</span>
                     </button>
-                    <!-- Popover for Yemot HaMashiach -->
                     <div id="yemotPopover" class="hidden absolute left-0 mt-2 w-72 p-4 card rounded-2xl shadow-2xl z-50">
                         <h4 class="font-bold text-sm mb-1 dark:text-white">חיבור לבימות המשיח</h4>
                         <p class="text-[10px] text-slate-500 dark:text-slate-400 mb-3">הזן טוקן כאן. את השלוחה ומספר הקובץ תבחר בנפרד לכל הקלטה.</p>
-                        <input id="yemotToken" type="password" class="w-full p-2 text-xs bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-green-500 mb-3" placeholder="טוקן (או מספר_מערכת:סיסמה)">
+                        <input id="yemotToken" type="password" class="w-full p-2 text-xs bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-green-500 mb-3" placeholder="טוקן (למשל: 033060136:219219)">
                         <div class="flex gap-2">
                             <button id="saveYemot" class="flex-1 py-2 bg-green-600 text-white text-[10px] font-bold rounded-lg hover:bg-green-700">שמור טוקן</button>
                             <button id="clearYemot" class="flex-1 py-2 bg-red-50 text-red-600 text-[10px] font-bold rounded-lg hover:bg-red-100">מחק</button>
@@ -54,13 +51,11 @@
                     </div>
                 </div>
 
-                <!-- API Key Management -->
                 <div class="relative group">
                     <button id="apiKeyBtn" class="p-3 rounded-xl card shadow-sm hover:scale-105 transition-all flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
                         <span id="apiKeyStatus">הגדר מפתחות</span>
                     </button>
-                    <!-- Popover for API Key -->
                     <div id="apiKeyPopover" class="hidden absolute left-0 mt-2 w-72 p-4 card rounded-2xl shadow-2xl z-50">
                         <h4 class="font-bold text-sm mb-1 dark:text-white">מערך מפתחות (Gemini API)</h4>
                         <p class="text-[10px] text-slate-500 dark:text-slate-400 mb-2">ניתן להדביק מספר מפתחות לעקיפת עומסים. **כל מפתח בשורה נפרדת.**</p>
@@ -81,9 +76,7 @@
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <!-- Sidebar / Input -->
             <div class="lg:col-span-5 space-y-6">
-                <!-- AI Smart Generation Card -->
                 <div class="card p-6 rounded-[2rem] shadow-lg ai-glow border-indigo-100 dark:border-indigo-900/30">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="font-bold text-indigo-900 dark:text-indigo-300">יצירת תוכן חכמה</h3>
@@ -106,7 +99,6 @@
                     </div>
                 </div>
 
-                <!-- Main Narration Card -->
                 <div class="card p-7 rounded-[2.5rem] shadow-xl border-none">
                     <div class="flex justify-between items-center mb-2">
                         <label class="text-sm font-bold text-slate-500 dark:text-slate-400">טקסט לקריינות</label>
@@ -193,7 +185,6 @@
                 </div>
             </div>
 
-            <!-- Library / History -->
             <div class="lg:col-span-7">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-xl font-bold dark:text-white">הקלטות אחרונות</h2>
@@ -208,7 +199,6 @@
         </div>
     </div>
 
-    <!-- Notification Toast -->
     <div id="toast" class="fixed bottom-8 left-8 px-6 py-3 rounded-xl shadow-2xl opacity-0 transition-all pointer-events-none z-50 transform translate-y-4 flex items-center gap-2">
         <span id="toastIcon"></span>
         <span id="toastMessage"></span>
@@ -496,13 +486,18 @@
             toggleLoader('btn', false);
         };
 
-        // --- Yemot HaMashiach Upload Function (Smart Error Catching) ---
+        // --- Yemot HaMashiach Upload Function (דרך שרת ה-Python שלנו ב-Render) ---
         window.uploadToYemot = async function(btnElement, blobUrl, extId, fileId) {
+            
+            // >>> הזן כאן את הכתובת של שרת ה-Render החדש שלך! <<<
+            // אל תשכח להשאיר את המילה /upload_to_yemot בסוף!
+            const PROXY_URL = "https://YOUR_RENDER_URL_HERE/upload_to_yemot"; 
+            
             const token = localStorage.getItem('yemot_token');
             const ext = document.getElementById(extId).value.trim();
             const fileNum = document.getElementById(fileId).value.trim();
 
-            if (!token) { showToast("יש להגדיר טוקן חיבור למעלה"); els.yemotPopover.classList.remove('hidden'); return; }
+            if (!token) { showToast("יש להגדיר טוקן חיבור למעלה (למשל: 033060136:219219)"); els.yemotPopover.classList.remove('hidden'); return; }
             if (!ext || !fileNum) return showToast("יש להזין שלוחה ומספר קובץ");
 
             const originalHtml = btnElement.innerHTML;
@@ -510,57 +505,38 @@
             btnElement.disabled = true;
 
             try {
+                // לוקחים את האודיו מהדפדפן
                 const res = await fetch(blobUrl);
                 const blob = await res.blob();
                 
-                const reader = new FileReader();
-                reader.readAsDataURL(blob);
-                reader.onloadend = async function() {
-                    const base64data = reader.result.split(',')[1];
-                    
-                    try {
-                        const uploadRes = await fetch('/api/upload', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                token: token,
-                                path: `ivr2:${ext}/${fileNum}.wav`,
-                                fileBase64: base64data
-                            })
-                        });
+                // בונים את החבילה ישירות
+                const formData = new FormData();
+                formData.append('token', token);
+                formData.append('path', `ivr2:${ext}/${fileNum}.wav`);
+                formData.append('file', blob, `${fileNum}.wav`);
 
-                        const textData = await uploadRes.text();
-                        let data;
-                        try {
-                            data = JSON.parse(textData);
-                        } catch(e) {
-                            if (uploadRes.status === 404) {
-                                throw new Error("שגיאה 404: תיקיית השרת (api) לא נמצאת או לא מעודכנת ב-Vercel.");
-                            } else if (uploadRes.status >= 500) {
-                                throw new Error("שגיאה 500: קריסה פנימית בשרת ה-Vercel שלנו.");
-                            } else {
-                                throw new Error(`שגיאה לא מוכרת: השרת החזיר דף HTML. (קוד ${uploadRes.status})`);
-                            }
-                        }
+                // שולחים לשרת המתווך שלנו ב-Render!
+                const uploadRes = await fetch(PROXY_URL, {
+                    method: 'POST',
+                    body: formData
+                });
 
-                        if (!uploadRes.ok) {
-                            throw new Error(data.error || "שגיאה מהשרת");
-                        }
+                const textResponse = await uploadRes.text();
 
-                        if (data.responseStatus === "OK") {
-                            showToast(`קובץ ${fileNum} הועלה בהצלחה לשלוחה ${ext}!`, "success");
-                        } else {
-                            throw new Error(data.message || data.error || "שגיאה לא ידועה מבימות המשיח");
-                        }
-                    } catch (err) {
-                        showToast(err.message);
-                    } finally {
-                        btnElement.innerHTML = originalHtml;
-                        btnElement.disabled = false;
+                try {
+                    const data = JSON.parse(textResponse);
+                    if (data.responseStatus === "OK") {
+                        showToast(`קובץ ${fileNum} הועלה בהצלחה לשלוחה ${ext}!`, "success");
+                    } else {
+                        throw new Error(data.message || data.error || "שגיאה מהמתווך");
                     }
-                };
+                } catch(e) {
+                    throw new Error("שגיאת רשת מהמתווך: " + textResponse.substring(0, 50));
+                }
+
             } catch (e) {
-                showToast("שגיאה בהכנת הקובץ: " + e.message);
+                showToast("שגיאה בהעלאה: " + e.message);
+            } finally {
                 btnElement.innerHTML = originalHtml;
                 btnElement.disabled = false;
             }
